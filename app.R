@@ -12,7 +12,8 @@ buscar <- function(termo, inicio) {
   print(
     glue::glue("[{Sys.time()}] consulta recebida com {nrow(res)} resultados.")
   )
-  res
+  res %>% 
+    mutate(link = sprintf('<a href="%s">Link</a>', link))
 }
 
 limpar_termo <- function(termo) {
@@ -20,6 +21,10 @@ limpar_termo <- function(termo) {
     str_to_lower() %>% 
     stringi::stri_trans_general("Latin-ASCII")
 }
+
+opt <- list(pageLength = 10, lengthChange = FALSE, autoWidth = TRUE, 
+            columnDefs = list(list(width = '300px', targets = 1:4))
+)
 
 ui <- fluidPage(
   fluidRow(
@@ -32,8 +37,14 @@ ui <- fluidPage(
       actionButton("buscar", "Buscar!", icon("search"))
     ),
     column(
-      8,
-      plotOutput("evolucao")
+      8, 
+      tabsetPanel(
+        tabPanel("Gráfico", plotOutput("evolucao")),
+        tabPanel("Resulados busca 1", 
+                 DT::dataTableOutput("tbl_termo1", 500)),
+        tabPanel("Resulados busca 2", 
+                 DT::dataTableOutput("tbl_termo2", 500))
+      )
     )
   )
 )
@@ -70,6 +81,22 @@ server <- function(input, output, session) {
       periodo(input$periodo)
     }
   })
+  
+  output$tbl_termo1 <- DT::renderDataTable({
+    validate(
+      need(input$buscar, "Aperte o botão para gerar o relatório")
+    )
+    
+    resposta1()
+  }, options = opt, escape = FALSE)
+  
+  output$tbl_termo2 <- DT::renderDataTable({
+    validate(
+      need(input$buscar, "Aperte o botão para gerar o relatório")
+    )
+    
+    resposta2()
+  }, options = opt, escape = FALSE)
 
   output$evolucao <- renderPlot({
     validate(
